@@ -15,7 +15,7 @@ app.get('/contacts', (req, res) => {
 
 app.post('/contacts', (req, res) => {
   const { name, phone } = req.query
-  if (!name || !phone) res.status(422).send('Unprocessable Entity.')
+  if (!name || !phone) return res.status(422).send('Unprocessable Entity.')
 
   const contacts = JSON.parse(
     fs.readFileSync(databasePath, err => {
@@ -33,11 +33,38 @@ app.post('/contacts', (req, res) => {
   })
 })
 
-app.put('/contacts/:id', (req, res) => {})
+app.put('/contacts/:id', (req, res) => {
+  const { id } = req.params
+  const { name, phone } = req.query
+
+  if (!name && !phone) return res.status(422).send('Unprocessable Entity.')
+
+  const contacts = JSON.parse(
+    fs.readFileSync(databasePath, err => {
+      if (err) throw err
+    })
+  )
+
+  let foundContact = false
+  const updatedContacts = contacts.map(item => {
+    if (item.id === parseInt(id)) {
+      foundContact = true
+      item.name = name || item.name
+      item.phone = phone || item.phone
+    }
+    return item
+  })
+
+  if (!foundContact) return res.status(404).send('Contact not found!')
+
+  fs.writeFile(databasePath, JSON.stringify(updatedContacts, null, 2), err => {
+    if (err) throw err
+    res.status(200).send('Update Contact!')
+  })
+})
 
 app.delete('/contacts/:id', (req, res) => {
   const { id } = req.params
-  if (!id) res.status(400).send('Bad Request.')
 
   const contacts = JSON.parse(
     fs.readFileSync(databasePath, err => {
